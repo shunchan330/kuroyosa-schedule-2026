@@ -53,12 +53,13 @@ function rows(){const r=[];sel.forEach(n=>ALL[n].slots.forEach(s=>r.push({...s,t
 const gapTxt=e=>e.gap==null?"":e.gap<0?"かぶり":e.gap>=60?Math.floor(e.gap/60)+"時間"+(e.gap%60?e.gap%60+"分":""):e.gap+"分";
 function make(scroll=true){if(!sel.length)return;const r=rows();const box=document.getElementById("rows");
  box.innerHTML=r.map(e=>{const long=e.min!==5;return `<div class="row" style="border-left-color:${colorOf(e.team)}"><div class="t">${e.start}${long?`<small>〜${e.end}</small>`:""}</div><div><span class="tm" style="background:${colorOf(e.team)}">${esc(e.team)}</span><div class="v">${short(e.venue)}${e.note?` <span class="n">${esc(noteTxt(e.note))}</span>`:""}</div></div><div class="g${e.warn?" warn":""}">${gapTxt(e)}</div></div>`}).join("");
- const res=document.getElementById("result");res.style.display="block";document.getElementById("preview").style.display="none";document.getElementById("pvnote").style.display="none";if(scroll)res.scrollIntoView({behavior:"smooth"})}
+ const res=document.getElementById("result");res.style.display="block";document.getElementById("preview").style.display="none";document.getElementById("pvnote").style.display="none";if(scroll)res.scrollIntoView({behavior:"smooth"});if(isSecret()&&scroll)toast("🤫 シークレット発動!画像が今年のポスター仕様になります")}
 function save(){const q=sel.map(encodeURIComponent).join(",");history.replaceState(null,"",q?"#t="+q:location.pathname);try{localStorage.setItem("kuroyosa_my",JSON.stringify(sel))}catch(e){}}
 function load(){const m=location.hash.match(/t=([^&]*)/);let s=[];if(m)s=m[1].split(",").map(decodeURIComponent);else{try{s=JSON.parse(localStorage.getItem("kuroyosa_my")||"[]")}catch(e){}}sel=s.filter(n=>ALL[n]);return !!m}
 const img=src=>new Promise(ok=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>ok(null);i.src=src});
 function rr(c,x,y,w,h,r,f){c.beginPath();c.roundRect?c.roundRect(x,y,w,h,r):c.rect(x,y,w,h);c.fillStyle=f;c.fill()}
-async function drawImage(){const r=rows();const W=1440,F='"Hiragino Sans","Noto Sans JP",sans-serif';const rh=r.length>12?84:104;const nT=Math.ceil(sel.length/3);const H=Math.max(1800,470+nT*72+rh*r.length+240);
+const isSecret=()=>sel.length===1&&sel[0]==="REDA舞神楽";
+async function drawImage(){if(isSecret())return drawSecret();const r=rows();const W=1440,F='"Hiragino Sans","Noto Sans JP",sans-serif';const rh=r.length>12?84:104;const nT=Math.ceil(sel.length/3);const H=Math.max(1800,470+nT*72+rh*r.length+240);
  const cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");const [bg,lg]=await Promise.all([img("img/bg.jpg"),img("img/logo.png")]);
  c.fillStyle="#14203c";c.fillRect(0,0,W,H);if(bg){const s=Math.max(W/bg.width,H/bg.height);c.drawImage(bg,(W-bg.width*s)/2,0,bg.width*s,bg.height*s)}
  if(lg){const h=300,w=lg.width*h/lg.height;c.drawImage(lg,W-w-50,44,w,h)}
@@ -74,10 +75,22 @@ async function drawImage(){const r=rows();const W=1440,F='"Hiragino Sans","Noto 
   c.font=`800 ${gapTxt(e).length>4?26:32}px ${F}`;c.fillStyle=e.warn?"#ff7a7a":"#e1e4ee";c.fillText(gapTxt(e),1190,cy);yy+=rh});
  c.font=`600 28px ${F}`;c.fillStyle="#e1e4ee";["※ 主催タイムスケジュール(11/7版)から作成。当日の進行で前後する場合があります","※ ファイナル進出発表 14:25 → パレード 15:00(シンボル)・ステージ 15:42〜(市役所)","※「次まで」= 演舞終了から次の演舞開始まで(赤字=別会場へ10分未満・かぶり=時間が重なる)"].forEach((s,i)=>c.fillText(s,80,yy+30+i*42));
  return cv}
+// シークレット: REDA舞神楽だけを選ぶと今年のポスター仕様
+async function drawSecret(){const r=rows();const W=1440,H=1800,F='"Hiragino Sans","Noto Sans JP",sans-serif';const cv=document.createElement("canvas");cv.width=W;cv.height=H;const c=cv.getContext("2d");
+ c.fillStyle="#0b1428";c.fillRect(0,0,W,H);const ps=await img("img/poster.jpg");if(ps)c.drawImage(ps,0,0,W,W*ps.height/ps.width);
+ const g=c.createLinearGradient(0,760,0,1060);g.addColorStop(0,"rgba(11,20,40,0)");g.addColorStop(0.7,"rgba(11,20,40,0.92)");g.addColorStop(1,"#0b1428");c.fillStyle=g;c.fillRect(0,760,W,300);c.fillStyle="#0b1428";c.fillRect(0,1060,W,H-1060);
+ c.textBaseline="middle";c.lineJoin="round";const T=(s,x,y,f,col)=>{c.font=f;c.lineWidth=12;c.strokeStyle="#0b1428";c.strokeText(s,x,y);c.fillStyle=col;c.fillText(s,x,y)};
+ T("REDA舞神楽",80,930,`900 96px ${F}`,"#fff");T("マイタイスケ  "+DATA.date,84,1030,`800 44px ${F}`,"#ffcd3c");
+ let yy=1090;const rh=104;r.forEach((e,i)=>{const h=rh-12,cy=yy+h/2;rr(c,80,yy,W-160,h,16,i%2?"rgba(200,16,30,0.85)":"rgba(160,10,24,0.85)");
+  c.fillStyle="#ffcd3c";c.font=`900 60px ${F}`;c.fillText(e.start,120,cy);c.fillStyle="#fff";c.font=`800 52px ${F}`;c.fillText(short(e.venue),440,e.note?cy-12:cy);
+  if(e.note){c.font=`700 26px ${F}`;c.fillStyle="#ffe0a0";c.fillText(noteTxt(e.note),444,cy+30)}
+  if(e.gap!=null){c.font=`800 32px ${F}`;c.fillStyle="#fff";c.fillText("次まで "+gapTxt(e),1110,cy)}yy+=rh});
+ c.font=`600 28px ${F}`;c.fillStyle="#e1e4ee";["※ 主催タイムスケジュール(11/7版)から作成。当日の進行で前後する場合があります","※ ファイナル進出なら 14:25発表 → 15:00 パレード(シンボル)・15:42〜 ステージ(市役所)"].forEach((s,i)=>c.fillText(s,80,yy+34+i*42));
+ return cv}
 document.getElementById("make").onclick=()=>make(true);
 document.getElementById("clear").onclick=()=>{sel=[];renderChips();save();document.getElementById("result").style.display="none"};
 document.getElementById("save").onclick=async()=>{const b=document.getElementById("save");b.disabled=true;b.textContent="作成中…";const cv=await drawImage();
- cv.toBlob(async blob=>{const fn="黒潮よさこい2026_マイタイスケ.png";const file=new File([blob],fn,{type:"image/png"});
+ cv.toBlob(async blob=>{const fn=isSecret()?"黒潮よさこい2026_REDA舞神楽_ポスター版.png":"黒潮よさこい2026_マイタイスケ.png";const file=new File([blob],fn,{type:"image/png"});
   if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file],title:"マイタイスケ"})}catch(e){}}
   else{const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=fn;a.click()}
   const pv=document.getElementById("preview");pv.src=cv.toDataURL("image/png");pv.style.display="block";document.getElementById("pvnote").style.display="block";b.disabled=false;b.textContent="📷 画像で保存"},"image/png")};
